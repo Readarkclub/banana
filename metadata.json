@@ -1,0 +1,5 @@
+{
+  "name": "Nano Banana Pro Imager",
+  "description": "A minimalist, high-quality image generation tool using the Gemini Nano Banana Pro model. Features include text-to-image, reference image support, and customizable resolution and aspect ratio settings.",
+  "requestFramePermissions": []
+}
