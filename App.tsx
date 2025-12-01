@@ -1,19 +1,20 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { generateImageContent } from './services/geminiService';
 import { GenerationSettings, AspectRatio, ImageResolution } from './types';
-import { DownloadIcon, UploadIcon, XMarkIcon, SparklesIcon, AdjustmentsIcon } from './components/Icon';
+import { DownloadIcon, UploadIcon, XMarkIcon, SparklesIcon, AdjustmentsIcon, TrashIcon, ExpandIcon } from './components/Icon';
 
 const App: React.FC = () => {
   // State
   const [prompt, setPrompt] = useState<string>('');
-  const [referenceImage, setReferenceImage] = useState<string | null>(null);
+  const [referenceImages, setReferenceImages] = useState<string[]>([]);
   const [generatedImage, setGeneratedImage] = useState<string | null>(null);
   const [isGenerating, setIsGenerating] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
+  const [isPromptExpanded, setIsPromptExpanded] = useState<boolean>(false);
   
   // Settings State
   const [settings, setSettings] = useState<GenerationSettings>({
-    aspectRatio: '1:1',
+    aspectRatio: 'Auto',
     resolution: '1K',
     temperature: 1.0,
   });
@@ -25,23 +26,46 @@ const App: React.FC = () => {
 
   // Handlers
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      if (file.size > 5 * 1024 * 1024) {
-        setError("File size should be less than 5MB");
+    const files = e.target.files;
+    if (files) {
+      const newFiles = Array.from(files);
+      
+      if (referenceImages.length + newFiles.length > 10) {
+        setError("You can only upload up to 10 reference images.");
+        if (fileInputRef.current) {
+            fileInputRef.current.value = '';
+        }
         return;
       }
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        setReferenceImage(reader.result as string);
-        setError(null);
-      };
-      reader.readAsDataURL(file);
+
+      newFiles.forEach(file => {
+        if (file.size > 5 * 1024 * 1024) {
+            setError((prev) => (prev ? prev + "\n" : "") + `File ${file.name} is too large (max 5MB)`);
+            return;
+        }
+        const reader = new FileReader();
+        reader.onloadend = () => {
+            setReferenceImages(prev => [...prev, reader.result as string]);
+            setError(null);
+        };
+        reader.readAsDataURL(file);
+      });
+    }
+    // Reset input so the same file can be selected again if needed
+    if (fileInputRef.current) {
+        fileInputRef.current.value = '';
     }
   };
 
-  const handleRemoveReferenceImage = () => {
-    setReferenceImage(null);
+  const handleRemoveReferenceImage = (index: number) => {
+    setReferenceImages(prev => prev.filter((_, i) => i !== index));
+  };
+
+  const handleClear = () => {
+    setPrompt('');
+    setReferenceImages([]);
+    setGeneratedImage(null);
+    setError(null);
     if (fileInputRef.current) {
       fileInputRef.current.value = '';
     }
@@ -55,7 +79,7 @@ const App: React.FC = () => {
     setGeneratedImage(null);
 
     try {
-      const imageUrl = await generateImageContent(prompt, referenceImage, settings);
+      const imageUrl = await generateImageContent(prompt, referenceImages, settings);
       setGeneratedImage(imageUrl);
       // Scroll to output
       setTimeout(() => {
@@ -103,10 +127,17 @@ const App: React.FC = () => {
                 value={prompt}
                 onChange={(e) => setPrompt(e.target.value)}
                 placeholder="Describe your imagination..."
-                className="w-full text-xl md:text-2xl font-light placeholder-gray-300 border-none outline-none resize-none bg-transparent leading-tight"
-                rows={3}
+                className="w-full text-base md:text-lg font-light placeholder-gray-300 border-none outline-none resize-none bg-transparent leading-tight pr-10"
+                rows={4}
                 autoFocus
               />
+              <button
+                onClick={() => setIsPromptExpanded(true)}
+                className="absolute top-0 right-0 p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-full transition-colors"
+                title="Expand Prompt Editor"
+              >
+                <ExpandIcon className="w-5 h-5" />
+              </button>
               <div className="absolute bottom-2 right-2 text-xs text-gray-400">
                 {prompt.length}
               </div>
@@ -118,6 +149,7 @@ const App: React.FC = () => {
                <div className="relative">
                 <input
                   type="file"
+                  multiple
                   ref={fileInputRef}
                   onChange={handleFileChange}
                   accept="image/png, image/jpeg, image/webp"
@@ -125,14 +157,15 @@ const App: React.FC = () => {
                 />
                 <button
                   onClick={() => fileInputRef.current?.click()}
+                  disabled={referenceImages.length >= 10}
                   className={`flex items-center gap-2 px-4 py-2 rounded-full text-sm font-medium transition-colors ${
-                    referenceImage 
+                    referenceImages.length > 0
                       ? 'bg-gray-100 text-gray-800 border border-gray-200' 
                       : 'bg-white text-gray-600 hover:bg-gray-50 border border-gray-200'
-                  }`}
+                  } ${referenceImages.length >= 10 ? 'opacity-50 cursor-not-allowed' : ''}`}
                 >
                   <UploadIcon className="w-4 h-4" />
-                  {referenceImage ? 'Change Image' : 'Reference Image'}
+                  {referenceImages.length > 0 ? `Add More (${referenceImages.length}/10)` : 'Reference Images'}
                 </button>
               </div>
 
@@ -145,6 +178,20 @@ const App: React.FC = () => {
               >
                 <AdjustmentsIcon className="w-4 h-4" />
                 Settings
+              </button>
+
+              {/* Clear Button */}
+              <button
+                onClick={handleClear}
+                disabled={!prompt && referenceImages.length === 0 && !generatedImage}
+                className={`flex items-center gap-2 px-4 py-2 rounded-full text-sm font-medium transition-colors border ${
+                    !prompt && referenceImages.length === 0 && !generatedImage
+                    ? 'bg-transparent border-transparent text-gray-300 cursor-not-allowed'
+                    : 'bg-white text-gray-600 hover:text-red-600 hover:bg-red-50 border-gray-200'
+                }`}
+              >
+                <TrashIcon className="w-4 h-4" />
+                Clear
               </button>
               
               <div className="flex-1"></div>
@@ -176,20 +223,24 @@ const App: React.FC = () => {
               </button>
             </div>
 
-            {/* Reference Image Preview */}
-            {referenceImage && (
-              <div className="relative inline-block mt-4 group">
-                <img 
-                  src={referenceImage} 
-                  alt="Reference" 
-                  className="h-32 w-auto object-cover rounded-lg border border-gray-200 shadow-sm" 
-                />
-                <button
-                  onClick={handleRemoveReferenceImage}
-                  className="absolute -top-2 -right-2 bg-white rounded-full p-1 shadow-md border border-gray-200 text-gray-500 hover:text-red-500 transition-colors"
-                >
-                  <XMarkIcon className="w-4 h-4" />
-                </button>
+            {/* Reference Images Preview */}
+            {referenceImages.length > 0 && (
+              <div className="flex flex-wrap gap-4 mt-4">
+                {referenceImages.map((img, index) => (
+                    <div key={index} className="relative inline-block group">
+                        <img 
+                        src={img} 
+                        alt={`Reference ${index + 1}`} 
+                        className="h-32 w-auto object-cover rounded-lg border border-gray-200 shadow-sm" 
+                        />
+                        <button
+                        onClick={() => handleRemoveReferenceImage(index)}
+                        className="absolute -top-2 -right-2 bg-white rounded-full p-1 shadow-md border border-gray-200 text-gray-500 hover:text-red-500 transition-colors"
+                        >
+                        <XMarkIcon className="w-4 h-4" />
+                        </button>
+                    </div>
+                ))}
               </div>
             )}
 
@@ -199,7 +250,7 @@ const App: React.FC = () => {
                   <div className="space-y-2">
                     <label className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Aspect Ratio</label>
                     <div className="flex flex-wrap gap-2">
-                      {(['1:1', '3:4', '4:3', '9:16', '16:9'] as AspectRatio[]).map((ratio) => (
+                      {(['Auto', '1:1', '3:4', '4:3', '9:16', '16:9'] as AspectRatio[]).map((ratio) => (
                         <button
                           key={ratio}
                           onClick={() => setSettings(s => ({ ...s, aspectRatio: ratio }))}
@@ -301,6 +352,41 @@ const App: React.FC = () => {
       <footer className="py-6 text-center text-gray-400 text-xs border-t border-gray-100 bg-white">
           <p>This is a demo application. Use responsibly. <a href="https://ai.google.dev/gemini-api/docs/billing" target="_blank" rel="noopener noreferrer" className="underline hover:text-gray-600">Pricing Info</a></p>
       </footer>
+
+      {/* Prompt Expansion Modal */}
+      {isPromptExpanded && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4 animate-in fade-in duration-200">
+          <div className="bg-white w-full max-w-4xl h-[80vh] rounded-2xl shadow-2xl flex flex-col overflow-hidden animate-in zoom-in-95 duration-200">
+            <div className="flex justify-between items-center p-4 border-b border-gray-100 bg-gray-50">
+                <h3 className="font-semibold text-gray-700">Full Prompt Editor</h3>
+                <button 
+                    onClick={() => setIsPromptExpanded(false)}
+                    className="p-2 hover:bg-gray-200 rounded-full text-gray-500 transition-colors"
+                >
+                    <XMarkIcon className="w-5 h-5" />
+                </button>
+            </div>
+            <div className="flex-1 p-6">
+                <textarea
+                    value={prompt}
+                    onChange={(e) => setPrompt(e.target.value)}
+                    placeholder="Describe your imagination in detail..."
+                    className="w-full h-full text-lg font-light placeholder-gray-300 border-none outline-none resize-none bg-transparent leading-relaxed"
+                    autoFocus
+                />
+            </div>
+            <div className="p-4 border-t border-gray-100 bg-gray-50 flex justify-between items-center text-sm text-gray-500">
+                <span>{prompt.length} characters</span>
+                <button
+                    onClick={() => setIsPromptExpanded(false)}
+                    className="px-4 py-2 bg-black text-white rounded-full font-medium hover:bg-gray-800 transition-colors"
+                >
+                    Done
+                </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

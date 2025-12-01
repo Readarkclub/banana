@@ -16,11 +16,11 @@ async function ensureApiKey() {
 }
 
 /**
- * Generates an image based on prompt and optional reference image.
+ * Generates an image based on prompt and optional reference images.
  */
 export async function generateImageContent(
   prompt: string,
-  referenceImageBase64: string | null,
+  referenceImagesBase64: string[],
   settings: GenerationSettings
 ): Promise<string> {
   
@@ -31,18 +31,20 @@ export async function generateImageContent(
 
   const parts: any[] = [];
 
-  // If there is a reference image, add it.
-  if (referenceImageBase64) {
-    // Extract base64 data and mimeType (basic detection)
-    // Assumes format "data:image/xyz;base64,..."
-    const matches = referenceImageBase64.match(/^data:(.+);base64,(.+)$/);
-    if (matches && matches.length === 3) {
-      parts.push({
-        inlineData: {
-          mimeType: matches[1],
-          data: matches[2],
-        },
-      });
+  // If there are reference images, add them.
+  if (referenceImagesBase64 && referenceImagesBase64.length > 0) {
+    for (const refImg of referenceImagesBase64) {
+        // Extract base64 data and mimeType (basic detection)
+        // Assumes format "data:image/xyz;base64,..."
+        const matches = refImg.match(/^data:(.+);base64,(.+)$/);
+        if (matches && matches.length === 3) {
+          parts.push({
+            inlineData: {
+              mimeType: matches[1],
+              data: matches[2],
+            },
+          });
+        }
     }
   }
 
@@ -50,18 +52,24 @@ export async function generateImageContent(
   parts.push({ text: prompt });
 
   try {
+    const config: any = {
+      temperature: settings.temperature,
+      imageConfig: {
+        imageSize: settings.resolution,
+      },
+    };
+
+    // Only add aspectRatio if it is not 'Auto'
+    if (settings.aspectRatio !== 'Auto') {
+        config.imageConfig.aspectRatio = settings.aspectRatio;
+    }
+
     const response = await ai.models.generateContent({
       model: MODEL_NAME,
       contents: {
         parts: parts,
       },
-      config: {
-        temperature: settings.temperature,
-        imageConfig: {
-          aspectRatio: settings.aspectRatio,
-          imageSize: settings.resolution,
-        },
-      },
+      config: config,
     });
 
     // Check for candidates
