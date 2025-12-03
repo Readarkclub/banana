@@ -1,6 +1,6 @@
 // import { GoogleGenAI } from "@google/genai"; // SDK removed to allow custom base URL via fetch
 
-const MODEL_NAME = 'gemini-3-pro-image-preview'; // User explicitly requested model
+const MODEL_NAME = 'gemini-3-pro-image-preview';
 
 export async function onRequestPost(context) {
   try {
