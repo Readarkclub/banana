@@ -7,7 +7,12 @@ export async function onRequestPost(context) {
     const { request, env } = context;
     const apiKey = env.GEMINI_API_KEY;
     // Allow configuring a custom gateway URL (e.g., Cloudflare Worker)
-    const baseUrl = env.GEMINI_GATEWAY_URL || 'https://generativelanguage.googleapis.com';
+    let baseUrl = env.GEMINI_GATEWAY_URL || 'https://generativelanguage.googleapis.com';
+    
+    // Remove trailing slash from baseUrl if present
+    if (baseUrl.endsWith('/')) {
+        baseUrl = baseUrl.slice(0, -1);
+    }
 
     if (!apiKey) {
       return new Response(JSON.stringify({ error: "Configuration Error: Missing API Key" }), {
