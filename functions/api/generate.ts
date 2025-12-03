@@ -1,6 +1,6 @@
 // import { GoogleGenAI } from "@google/genai"; // SDK removed to allow custom base URL via fetch
 
-const MODEL_NAME = 'gemini-3-pro-image-preview'; // User requested model
+const MODEL_NAME = 'gemini-3.0-pro-image'; // User requested model
 
 export async function onRequestPost(context) {
   try {
@@ -49,7 +49,10 @@ export async function onRequestPost(context) {
     // Add text prompt with strict instruction
     // We need to ensure the model knows this is an image generation request.
     // For Gemini models that support creating images (like via Imagen integration), specific keywords often help.
-    parts.push({ text: `Create an image of: ${prompt}` });
+    // Using a very direct prompt to bypass "helpful assistant" chat mode.
+    parts.push({ text: `[Strict Image Generation Mode]
+Do not describe how to draw. Do not generate text.
+Generate a high-quality image based on this prompt: ${prompt}` });
 
     // Configure generation
     const generationConfig = {
