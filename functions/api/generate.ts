@@ -1,6 +1,6 @@
 // import { GoogleGenAI } from "@google/genai"; // SDK removed to allow custom base URL via fetch
 
-const MODEL_NAME = 'gemini-1.5-flash'; // Fallback to a stable model known for image generation capabilities
+const MODEL_NAME = 'gemini-2.0-flash-exp';
 
 export async function onRequestPost(context) {
   try {
