@@ -1,7 +1,6 @@
 // import { GoogleGenAI } from "@google/genai"; // SDK removed to allow custom base URL via fetch
 
-const MODEL_NAME = 'gemini-1.5-pro'; // Switch to 1.5 Pro which is generally reliable for image generation tasks (if supported) or we might need 'imagen-3.0-generate-001' on a different endpoint.
-// However, let's try 1.5 Pro first as it's a standard Gemini model.
+const MODEL_NAME = 'gemini-3-pro-image-preview'; // User requested model
 
 export async function onRequestPost(context) {
   try {
