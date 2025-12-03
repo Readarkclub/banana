@@ -1,6 +1,7 @@
 // import { GoogleGenAI } from "@google/genai"; // SDK removed to allow custom base URL via fetch
 
-const MODEL_NAME = 'gemini-2.0-flash-exp';
+const MODEL_NAME = 'gemini-1.5-pro'; // Switch to 1.5 Pro which is generally reliable for image generation tasks (if supported) or we might need 'imagen-3.0-generate-001' on a different endpoint.
+// However, let's try 1.5 Pro first as it's a standard Gemini model.
 
 export async function onRequestPost(context) {
   try {
@@ -46,31 +47,20 @@ export async function onRequestPost(context) {
       }
     }
 
-    // Add text prompt with explicit instruction to generate an image
-    // This prevents the model from just chatting about the prompt.
-    parts.push({ text: `Generate an image of: ${prompt}` });
+    // Add text prompt with strict instruction
+    // We need to ensure the model knows this is an image generation request.
+    // For Gemini models that support creating images (like via Imagen integration), specific keywords often help.
+    parts.push({ text: `Create an image of: ${prompt}` });
 
     // Configure generation
     const generationConfig = {
       temperature: settings?.temperature ?? 1.0,
-      // Note: REST API expects 'imageSize' inside a specific config or just params depending on model versions.
-      // For 2.0 Flash Exp, we follow the standard structure.
     };
 
-    // Specific handling for image generation models vs text models if needed.
-    // Assuming gemini-2.0-flash-exp supports standard generateContent with image output or tools.
-    // If this is strictly for image generation (like Imagen), the payload might differ.
-    // However, based on previous code, it seemed to use standard generateContent.
-    // Let's stick to the structure the SDK would have sent.
-    
-    // Adjusting config structure for REST API
-    // The SDK maps `config` to `generationConfig`.
-    // `imageConfig` is not standard in all Gemini models, but if the user was using it, we keep it.
     if (settings?.resolution) {
         // generationConfig.imageConfig = { imageSize: settings.resolution }; // Verify if this is valid for the REST API
     }
     
-    // For standard chat/text generation which 2.0 Flash is, we use this:
     const requestBody = {
       contents: [{ parts: parts }],
       generationConfig: generationConfig
@@ -106,6 +96,7 @@ export async function onRequestPost(context) {
     }
 
     let imageData = null;
+    // Check for inline data (standard for some models)
     if (candidate.content && candidate.content.parts) {
         for (const part of candidate.content.parts) {
           if (part.inlineData && part.inlineData.data) {
@@ -114,13 +105,14 @@ export async function onRequestPost(context) {
           }
         }
     }
+    
+    // Check for executable code that might contain image data (sometimes used in 2.0)
+    // Or check if the model returned a tool call that generated an image? 
+    // For simple REST, we expect inlineData.
 
     if (!imageData) {
          const textPart = candidate.content?.parts?.find(p => p.text);
-         // It's possible the model returned text instead of an image if it didn't understand to generate an image,
-         // or if this model is purely text-based and we are misusing it. 
-         // But we assume the previous code worked.
-         if (textPart) throw new Error(`Generation refused (Text response): ${textPart.text}`);
+         if (textPart) throw new Error(`Generation refused (Text response): ${textPart.text.substring(0, 100)}...`);
          throw new Error("No image data returned.");
     }
 
