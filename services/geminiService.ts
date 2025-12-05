@@ -3,6 +3,9 @@ import { GenerationSettings } from "../types";
 
 const MODEL_NAME = 'gemini-3-pro-image-preview'; // Nano Banana Pro / Gemini Pro Image
 
+// Get custom API endpoint from environment (for Cloudflare proxy, etc.)
+const GATEWAY_URL = process.env.GEMINI_GATEWAY_URL;
+
 /**
  * Ensures the user has selected a paid API key for the Pro model.
  */
@@ -26,8 +29,12 @@ export async function generateImageContent(
   
   await ensureApiKey();
 
-  // Create a new instance to ensure the latest API key is used
-  const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+  // Create a new instance with custom endpoint if configured
+  const aiConfig: any = { apiKey: process.env.API_KEY };
+  if (GATEWAY_URL) {
+    aiConfig.httpOptions = { baseUrl: GATEWAY_URL };
+  }
+  const ai = new GoogleGenAI(aiConfig);
 
   const parts: any[] = [];
 
@@ -66,8 +73,9 @@ export async function generateImageContent(
         parts: parts,
       },
       config: {
+        responseModalities: ["IMAGE"],
         temperature: settings.temperature,
-        imageConfig: imageConfig,
+        ...imageConfig,
       },
     });
 
