@@ -87,11 +87,6 @@ export async function generateImageContent(
     temperature: settings.temperature,
   };
 
-  // Add image size
-  if (settings.resolution) {
-    generationConfig.imageSize = settings.resolution;
-  }
-
   // Add aspect ratio (skip if Auto)
   if (settings.aspectRatio && settings.aspectRatio !== 'Auto') {
     generationConfig.aspectRatio = settings.aspectRatio;
