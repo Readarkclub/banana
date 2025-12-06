@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { generateImageContent } from './services/geminiService';
-import { GenerationSettings, AspectRatio, ImageResolution } from './types';
+import { GenerationSettings, AspectRatio } from './types';
 import { DownloadIcon, UploadIcon, XMarkIcon, SparklesIcon, AdjustmentsIcon, TrashIcon, ArrowsPointingOutIcon } from './components/Icon';
 
 const App: React.FC = () => {
@@ -283,7 +283,7 @@ const App: React.FC = () => {
 
             {/* Expanded Settings Panel */}
             {showSettings && (
-               <div className="p-6 bg-gray-50 rounded-2xl border border-gray-100 grid grid-cols-1 md:grid-cols-3 gap-6 animate-in fade-in slide-in-from-top-4 duration-300">
+               <div className="p-6 bg-gray-50 rounded-2xl border border-gray-100 grid grid-cols-1 md:grid-cols-2 gap-6 animate-in fade-in slide-in-from-top-4 duration-300">
                   <div className="space-y-2">
                     <label className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Aspect Ratio</label>
                     <div className="flex flex-wrap gap-2">
@@ -298,25 +298,6 @@ const App: React.FC = () => {
                           }`}
                         >
                           {ratio}
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-
-                  <div className="space-y-2">
-                    <label className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Resolution</label>
-                    <div className="flex flex-wrap gap-2">
-                      {(['1K', '2K', '4K'] as ImageResolution[]).map((res) => (
-                        <button
-                          key={res}
-                          onClick={() => setSettings(s => ({ ...s, resolution: res }))}
-                          className={`px-3 py-1.5 text-sm rounded-md border transition-all ${
-                            settings.resolution === res
-                              ? 'bg-white border-black text-black shadow-sm font-medium'
-                              : 'bg-transparent border-transparent text-gray-500 hover:bg-gray-200'
-                          }`}
-                        >
-                          {res}
                         </button>
                       ))}
                     </div>

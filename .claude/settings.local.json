@@ -1,0 +1,18 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(git -C \"D:\\claude\\banana\" log --oneline -10)",
+      "Bash(git -C \"D:\\claude\\banana\" remote:*)",
+      "Bash(npm install)",
+      "Bash(npm run dev:*)",
+      "Bash(curl:*)",
+      "Bash(git add:*)",
+      "Bash(git commit -m \"$(cat <<''EOF''\nfix: Add Cloudflare proxy support and fix image generation\n\n- Add GEMINI_GATEWAY_URL environment variable for custom API endpoint\n- Add responseModalities: [\"IMAGE\"] to fix image generation requests\n- Update vite.config.ts to expose GEMINI_GATEWAY_URL\n- Adapt index.html for local Vite development\n\n🤖 Generated with [Claude Code](https://claude.com/claude-code)\n\nCo-Authored-By: Claude <noreply@anthropic.com>\nEOF\n)\")",
+      "Bash(git push:*)",
+      "Bash(git commit -m \"$(cat <<''EOF''\nfeat: Add mobile browser compatibility and iOS support\n\n- Replace @google/genai SDK with native fetch for better mobile compatibility\n- Add request timeout handling (2 minutes)\n- Add mobile PWA meta tags (apple-mobile-web-app-capable, theme-color)\n- Add iOS safe area insets support (notch/home indicator)\n- Optimize download for iOS Safari and WeChat browser\n- Add touch-action manipulation for better touch response\n\n🤖 Generated with [Claude Code](https://claude.com/claude-code)\n\nCo-Authored-By: Claude <noreply@anthropic.com>\nEOF\n)\")",
+      "Bash(git commit:*)"
+    ],
+    "deny": [],
+    "ask": []
+  }
+}

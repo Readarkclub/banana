@@ -9,6 +9,15 @@ const API_KEY = process.env.API_KEY || '';
 // Request timeout (2 minutes for image generation)
 const REQUEST_TIMEOUT = 120000;
 
+// Aspect ratio to prompt suffix mapping (prompt engineering for aspect ratio control)
+const ASPECT_RATIO_PROMPTS: Record<string, string> = {
+  '1:1': ' (square format, 1:1 aspect ratio)',
+  '3:4': ' (portrait format, 3:4 aspect ratio)',
+  '4:3': ' (landscape format, 4:3 aspect ratio)',
+  '9:16': ' (vertical portrait format, 9:16 aspect ratio, tall image)',
+  '16:9': ' (widescreen landscape format, 16:9 aspect ratio, wide image)',
+};
+
 /**
  * Ensures the user has selected a paid API key for the Pro model (AI Studio only).
  */
@@ -78,8 +87,17 @@ export async function generateImageContent(
     });
   }
 
+  // Build final prompt with aspect ratio hint
+  let finalPrompt = prompt;
+  if (settings.aspectRatio && settings.aspectRatio !== 'Auto') {
+    const aspectHint = ASPECT_RATIO_PROMPTS[settings.aspectRatio];
+    if (aspectHint) {
+      finalPrompt = prompt + aspectHint;
+    }
+  }
+
   // Add text prompt
-  parts.push({ text: prompt });
+  parts.push({ text: finalPrompt });
 
   // Build generation config
   // Note: REST API only supports responseModalities and temperature
