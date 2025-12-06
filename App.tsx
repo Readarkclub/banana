@@ -103,12 +103,44 @@ const App: React.FC = () => {
 
   const handleDownload = () => {
     if (generatedImage) {
-      const link = document.createElement('a');
-      link.href = generatedImage;
-      link.download = `nano-banana-pro-${Date.now()}.png`;
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
+      // iOS Safari doesn't support download attribute well
+      const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
+      const isWechat = /MicroMessenger/i.test(navigator.userAgent);
+
+      if (isIOS || isWechat) {
+        // For iOS/WeChat: open image in new tab for long-press save
+        const newWindow = window.open();
+        if (newWindow) {
+          newWindow.document.write(`
+            <html>
+              <head>
+                <meta name="viewport" content="width=device-width, initial-scale=1.0">
+                <title>Save Image</title>
+                <style>
+                  body { margin: 0; display: flex; justify-content: center; align-items: center; min-height: 100vh; background: #f0f0f0; }
+                  img { max-width: 100%; height: auto; }
+                  p { text-align: center; color: #666; padding: 20px; }
+                </style>
+              </head>
+              <body>
+                <div>
+                  <img src="${generatedImage}" alt="Generated Image" />
+                  <p>Long press the image to save</p>
+                </div>
+              </body>
+            </html>
+          `);
+          newWindow.document.close();
+        }
+      } else {
+        // Standard download for desktop browsers
+        const link = document.createElement('a');
+        link.href = generatedImage;
+        link.download = `nano-banana-pro-${Date.now()}.png`;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+      }
     }
   };
 
@@ -136,7 +168,7 @@ const App: React.FC = () => {
                 value={prompt}
                 onChange={(e) => setPrompt(e.target.value)}
                 placeholder="Describe your imagination..."
-                className="w-full text-base md:text-lg font-light placeholder-gray-300 border-none outline-none resize-none bg-transparent p-0 pr-12 -mt-10"
+                className="w-full text-base md:text-lg font-light placeholder-gray-300 border-none outline-none resize-none bg-transparent p-0 pr-12 -mt-3"
                 rows={6}
                 autoFocus
               />
