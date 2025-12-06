@@ -82,15 +82,12 @@ export async function generateImageContent(
   parts.push({ text: prompt });
 
   // Build generation config
+  // Note: REST API only supports responseModalities and temperature
+  // aspectRatio and imageSize are SDK-specific and not supported in REST API
   const generationConfig: any = {
     responseModalities: ["IMAGE"],
     temperature: settings.temperature,
   };
-
-  // Add aspect ratio (skip if Auto)
-  if (settings.aspectRatio && settings.aspectRatio !== 'Auto') {
-    generationConfig.aspectRatio = settings.aspectRatio;
-  }
 
   // Build request body
   const requestBody = {
