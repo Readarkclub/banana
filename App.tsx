@@ -2,6 +2,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import { generateImageContent } from './services/geminiService';
 import { GenerationSettings, AspectRatio, ImageResolution } from './types';
 import { DownloadIcon, UploadIcon, XMarkIcon, SparklesIcon, AdjustmentsIcon, TrashIcon, ExpandIcon } from './components/Icon';
+import ImageEditor from './components/ImageEditor';
 
 const App: React.FC = () => {
   // State
@@ -11,6 +12,7 @@ const App: React.FC = () => {
   const [isGenerating, setIsGenerating] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
   const [isPromptExpanded, setIsPromptExpanded] = useState<boolean>(false);
+  const [editingImageIndex, setEditingImageIndex] = useState<number | null>(null);
   
   // Settings State
   const [settings, setSettings] = useState<GenerationSettings>({
@@ -28,7 +30,7 @@ const App: React.FC = () => {
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
     if (files) {
-      const newFiles = Array.from(files);
+      const newFiles: File[] = Array.from(files);
       
       if (referenceImages.length + newFiles.length > 10) {
         setError("You can only upload up to 10 reference images.");
@@ -71,15 +73,18 @@ const App: React.FC = () => {
     }
   };
 
-  const handleGenerate = async () => {
-    if (!prompt.trim()) return;
+  const handleGenerate = async (overridePrompt?: string, overrideImages?: string[]) => {
+    const promptToUse = overridePrompt ?? prompt;
+    const imagesToUse = overrideImages ?? referenceImages;
+
+    if (!promptToUse.trim()) return;
 
     setIsGenerating(true);
     setError(null);
     setGeneratedImage(null);
 
     try {
-      const imageUrl = await generateImageContent(prompt, referenceImages, settings);
+      const imageUrl = await generateImageContent(promptToUse, imagesToUse, settings);
       setGeneratedImage(imageUrl);
       // Scroll to output
       setTimeout(() => {
@@ -90,6 +95,15 @@ const App: React.FC = () => {
     } finally {
       setIsGenerating(false);
     }
+  };
+
+  const handleEditComplete = (compositedImage: string, editPrompt: string) => {
+    setEditingImageIndex(null);
+    setReferenceImages([compositedImage]); 
+    setPrompt(editPrompt);
+    
+    // Trigger generation immediately with the new data
+    handleGenerate(editPrompt, [compositedImage]);
   };
 
   const handleDownload = () => {
@@ -231,10 +245,12 @@ const App: React.FC = () => {
                         <img 
                         src={img} 
                         alt={`Reference ${index + 1}`} 
-                        className="h-32 w-auto object-cover rounded-lg border border-gray-200 shadow-sm" 
+                        onClick={() => setEditingImageIndex(index)}
+                        className="h-32 w-auto object-cover rounded-lg border border-gray-200 shadow-sm cursor-pointer hover:opacity-90 transition-opacity" 
+                        title="Click to Edit/Annotate"
                         />
                         <button
-                        onClick={() => handleRemoveReferenceImage(index)}
+                        onClick={(e) => { e.stopPropagation(); handleRemoveReferenceImage(index); }}
                         className="absolute -top-2 -right-2 bg-white rounded-full p-1 shadow-md border border-gray-200 text-gray-500 hover:text-red-500 transition-colors"
                         >
                         <XMarkIcon className="w-4 h-4" />
@@ -352,6 +368,15 @@ const App: React.FC = () => {
       <footer className="py-6 text-center text-gray-400 text-xs border-t border-gray-100 bg-white">
           <p>This is a demo application. Use responsibly. <a href="https://ai.google.dev/gemini-api/docs/billing" target="_blank" rel="noopener noreferrer" className="underline hover:text-gray-600">Pricing Info</a></p>
       </footer>
+
+      {/* Image Editor Modal */}
+      {editingImageIndex !== null && referenceImages[editingImageIndex] && (
+        <ImageEditor 
+            imageSrc={referenceImages[editingImageIndex]}
+            onClose={() => setEditingImageIndex(null)}
+            onComplete={handleEditComplete}
+        />
+      )}
 
       {/* Prompt Expansion Modal */}
       {isPromptExpanded && (

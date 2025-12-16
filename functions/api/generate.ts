@@ -6,15 +6,18 @@ export async function onRequestPost(context) {
   try {
     const { request, env } = context;
     const apiKey = env.GEMINI_API_KEY;
+    const gatewayUrl = env.GEMINI_GATEWAY_URL;
     // Allow configuring a custom gateway URL (e.g., Cloudflare Worker)
-    let baseUrl = env.GEMINI_GATEWAY_URL || 'https://generativelanguage.googleapis.com';
+    let baseUrl = gatewayUrl || 'https://generativelanguage.googleapis.com';
     
     // Remove trailing slash from baseUrl if present
     if (baseUrl.endsWith('/')) {
         baseUrl = baseUrl.slice(0, -1);
     }
 
-    if (!apiKey) {
+    // If using Google's direct API endpoint, an API key is required.
+    // If a gateway is configured, the gateway may inject authentication itself.
+    if (!apiKey && !gatewayUrl) {
       return new Response(JSON.stringify({ error: "Configuration Error: Missing API Key" }), {
         status: 500,
         headers: { "Content-Type": "application/json" },
@@ -70,12 +73,15 @@ Generate a high-quality image based on this prompt: ${prompt}` });
 
 
     // Call Gemini API via fetch
-    const apiUrl = `${baseUrl}/v1beta/models/${MODEL_NAME}:generateContent?key=${apiKey}`;
-    
+    const apiUrl = `${baseUrl}/v1beta/models/${MODEL_NAME}:generateContent`;
+    console.log('[DEBUG] Requesting URL:', apiUrl);
+    console.log('[DEBUG] baseUrl:', baseUrl);
+
     const apiResponse = await fetch(apiUrl, {
         method: 'POST',
         headers: {
-            'Content-Type': 'application/json'
+            'Content-Type': 'application/json',
+            ...(apiKey ? { 'x-goog-api-key': apiKey } : {}),
         },
         body: JSON.stringify(requestBody)
     });
