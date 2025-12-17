@@ -212,7 +212,7 @@ const App: React.FC = () => {
 
               {/* Generate Button */}
               <button
-                onClick={handleGenerate}
+                onClick={() => handleGenerate()}
                 disabled={!prompt.trim() || isGenerating}
                 className={`flex items-center gap-2 px-8 py-3 rounded-full text-base font-semibold transition-all shadow-sm ${
                   !prompt.trim() || isGenerating
