@@ -1,5 +1,5 @@
 import React, { useRef, useState, useEffect } from 'react';
-import { XMarkIcon } from './Icon';
+import { XMarkIcon, UndoIcon, RedoIcon } from './Icon';
 
 interface ImageEditorProps {
   imageSrc: string;
@@ -23,6 +23,49 @@ const ImageEditor: React.FC<ImageEditorProps> = ({ imageSrc, onClose, onComplete
   const imageRef = useRef<HTMLImageElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
 
+  // History State
+  const [history, setHistory] = useState<ImageData[]>([]);
+  const [historyStep, setHistoryStep] = useState<number>(-1);
+
+  const saveHistory = () => {
+    const canvas = canvasRef.current;
+    const ctx = canvas?.getContext('2d');
+    if (canvas && ctx) {
+      const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+      
+      // If we are not at the end of history, slice it
+      const newHistory = history.slice(0, historyStep + 1);
+      newHistory.push(imageData);
+      
+      setHistory(newHistory);
+      setHistoryStep(newHistory.length - 1);
+    }
+  };
+
+  const undo = () => {
+    if (historyStep > 0) {
+      const step = historyStep - 1;
+      const canvas = canvasRef.current;
+      const ctx = canvas?.getContext('2d');
+      if (canvas && ctx && history[step]) {
+        ctx.putImageData(history[step], 0, 0);
+        setHistoryStep(step);
+      }
+    }
+  };
+
+  const redo = () => {
+    if (historyStep < history.length - 1) {
+      const step = historyStep + 1;
+      const canvas = canvasRef.current;
+      const ctx = canvas?.getContext('2d');
+      if (canvas && ctx && history[step]) {
+        ctx.putImageData(history[step], 0, 0);
+        setHistoryStep(step);
+      }
+    }
+  };
+
   // Initialize canvas size when image loads
   useEffect(() => {
     const img = imageRef.current;
@@ -42,6 +85,14 @@ const ImageEditor: React.FC<ImageEditorProps> = ({ imageSrc, onClose, onComplete
           ctx.lineWidth = 4;
           ctx.lineCap = 'round';
           ctx.lineJoin = 'round';
+          
+          // Clear history and save initial blank state
+          setHistory([]);
+          setHistoryStep(-1);
+          // Need to wait a tick for canvas clear or just save blank immediately
+          const initialData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+          setHistory([initialData]);
+          setHistoryStep(0);
         }
       };
 
@@ -68,9 +119,12 @@ const ImageEditor: React.FC<ImageEditorProps> = ({ imageSrc, onClose, onComplete
   };
 
   const stopDrawing = () => {
-    setIsDrawing(false);
-    const ctx = canvasRef.current?.getContext('2d');
-    if (ctx) ctx.beginPath(); // Reset path
+    if (isDrawing) {
+        setIsDrawing(false);
+        const ctx = canvasRef.current?.getContext('2d');
+        if (ctx) ctx.beginPath(); // Reset path
+        saveHistory();
+    }
   };
 
   const draw = (e: React.MouseEvent | React.TouchEvent) => {
@@ -144,6 +198,27 @@ const ImageEditor: React.FC<ImageEditorProps> = ({ imageSrc, onClose, onComplete
           </h3>
           
           <div className="flex items-center gap-3 bg-gray-100 px-4 py-2 rounded-full">
+            
+            {/* Undo/Redo Controls */}
+            <div className="flex items-center gap-1 border-r border-gray-300 pr-3 mr-2">
+                <button 
+                    onClick={undo}
+                    disabled={historyStep <= 0}
+                    className="p-1.5 rounded-full hover:bg-gray-200 disabled:opacity-30 disabled:hover:bg-transparent transition-colors text-gray-600"
+                    title="Undo"
+                >
+                    <UndoIcon className="w-5 h-5" />
+                </button>
+                <button 
+                    onClick={redo}
+                    disabled={historyStep >= history.length - 1}
+                    className="p-1.5 rounded-full hover:bg-gray-200 disabled:opacity-30 disabled:hover:bg-transparent transition-colors text-gray-600"
+                    title="Redo"
+                >
+                    <RedoIcon className="w-5 h-5" />
+                </button>
+            </div>
+
             <span className="text-xs font-medium text-gray-500 uppercase">Brush Color</span>
             <div className="flex gap-2">
               {COLORS.map((color) => (
