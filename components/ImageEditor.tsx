@@ -7,9 +7,18 @@ interface ImageEditorProps {
   onComplete: (compositedImage: string, prompt: string) => void;
 }
 
+const COLORS = [
+  { name: 'Red', value: '#ef4444' },
+  { name: 'Green', value: '#22c55e' },
+  { name: 'Blue', value: '#3b82f6' },
+  { name: 'Yellow', value: '#eab308' },
+  { name: 'Purple', value: '#a855f7' },
+];
+
 const ImageEditor: React.FC<ImageEditorProps> = ({ imageSrc, onClose, onComplete }) => {
   const [prompt, setPrompt] = useState('');
   const [isDrawing, setIsDrawing] = useState(false);
+  const [activeColor, setActiveColor] = useState(COLORS[0].value);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const imageRef = useRef<HTMLImageElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -29,7 +38,7 @@ const ImageEditor: React.FC<ImageEditorProps> = ({ imageSrc, onClose, onComplete
         // Setup default context
         const ctx = canvas.getContext('2d');
         if (ctx) {
-          ctx.strokeStyle = 'red';
+          ctx.strokeStyle = activeColor;
           ctx.lineWidth = 4;
           ctx.lineCap = 'round';
           ctx.lineJoin = 'round';
@@ -43,6 +52,15 @@ const ImageEditor: React.FC<ImageEditorProps> = ({ imageSrc, onClose, onComplete
       }
     }
   }, [imageSrc]);
+
+  // Update context when color changes
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    const ctx = canvas?.getContext('2d');
+    if (ctx) {
+      ctx.strokeStyle = activeColor;
+    }
+  }, [activeColor]);
 
   const startDrawing = (e: React.MouseEvent | React.TouchEvent) => {
     setIsDrawing(true);
@@ -121,9 +139,27 @@ const ImageEditor: React.FC<ImageEditorProps> = ({ imageSrc, onClose, onComplete
         {/* Header */}
         <div className="flex justify-between items-center p-4 border-b border-gray-100 bg-gray-50">
           <h3 className="font-semibold text-gray-700 flex items-center gap-2">
-            <span className="w-2 h-2 rounded-full bg-red-500 animate-pulse"></span>
+            <span className="w-2 h-2 rounded-full animate-pulse" style={{ backgroundColor: activeColor }}></span>
             Edit & Annotate
           </h3>
+          
+          <div className="flex items-center gap-3 bg-gray-100 px-4 py-2 rounded-full">
+            <span className="text-xs font-medium text-gray-500 uppercase">Brush Color</span>
+            <div className="flex gap-2">
+              {COLORS.map((color) => (
+                <button
+                  key={color.value}
+                  onClick={() => setActiveColor(color.value)}
+                  className={`w-6 h-6 rounded-full border-2 transition-transform hover:scale-110 ${
+                    activeColor === color.value ? 'border-gray-900 scale-110' : 'border-transparent'
+                  }`}
+                  style={{ backgroundColor: color.value }}
+                  title={color.name}
+                />
+              ))}
+            </div>
+          </div>
+
           <button 
             onClick={onClose}
             className="p-2 hover:bg-gray-200 rounded-full text-gray-500 transition-colors"
