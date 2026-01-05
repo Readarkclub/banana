@@ -110,11 +110,32 @@ Generate a high-quality image based on this prompt: ${prompt}`,
 
       const data = await parseJsonOrThrow(response);
       if (!response.ok) {
+        // Check for rate limit error from Gateway
+        if (response.status === 429 || data?.error?.status === 'RATE_LIMIT_EXCEEDED') {
+          const error = new Error(data?.error?.message || 'Daily request limit reached');
+          (error as any).isRateLimitError = true;
+          (error as any).dailyLimit = data?.rateLimit?.limit || 200;
+          (error as any).resetTime = data?.rateLimit?.resetTime || 'UTC 00:00';
+          throw error;
+        }
         const message = data?.error?.message || data?.error || `Server error: ${response.status}`;
         throw new Error(String(message));
       }
 
-      return { imageData: extractFirstInlineImageData(data) };
+      // Extract rate limit info from response headers (set by Gateway Worker)
+      const rateLimitRemaining = response.headers.get('X-RateLimit-Remaining');
+      const rateLimitLimit = response.headers.get('X-RateLimit-Limit');
+      const rateLimitUsed = response.headers.get('X-RateLimit-Used');
+
+      const rateLimitInfo: RateLimitInfo | undefined = rateLimitRemaining
+        ? {
+            remaining: parseInt(rateLimitRemaining, 10),
+            limit: parseInt(rateLimitLimit || '200', 10),
+            used: parseInt(rateLimitUsed || '0', 10),
+          }
+        : undefined;
+
+      return { imageData: extractFirstInlineImageData(data), rateLimit: rateLimitInfo };
     }
 
     const response = await fetch('/api/generate', {
