@@ -1,12 +1,56 @@
 // import { GoogleGenAI } from "@google/genai"; // SDK removed to allow custom base URL via fetch
 
 const MODEL_NAME = 'gemini-3-pro-image-preview';
+const DAILY_LIMIT = 200; // RPD (Requests Per Day) limit
+
+// Get current date in UTC as key (format: YYYY-MM-DD)
+function getTodayKey(): string {
+  const now = new Date();
+  return `rpd:${now.getUTCFullYear()}-${String(now.getUTCMonth() + 1).padStart(2, '0')}-${String(now.getUTCDate()).padStart(2, '0')}`;
+}
+
+// Check and increment rate limit counter
+async function checkRateLimit(kv: KVNamespace | undefined): Promise<{ allowed: boolean; current: number; remaining: number }> {
+  if (!kv) {
+    // KV not configured, allow all requests (for local dev without KV)
+    return { allowed: true, current: 0, remaining: DAILY_LIMIT };
+  }
+
+  const key = getTodayKey();
+  const currentStr = await kv.get(key);
+  const current = currentStr ? parseInt(currentStr, 10) : 0;
+
+  if (current >= DAILY_LIMIT) {
+    return { allowed: false, current, remaining: 0 };
+  }
+
+  // Increment counter with 24h expiry (auto-cleanup old keys)
+  await kv.put(key, String(current + 1), { expirationTtl: 86400 });
+
+  return { allowed: true, current: current + 1, remaining: DAILY_LIMIT - current - 1 };
+}
 
 export async function onRequestPost(context) {
   try {
     const { request, env } = context;
     const apiKey = env.GEMINI_API_KEY;
     const gatewayUrl = env.GEMINI_GATEWAY_URL;
+
+    // Rate limit check
+    console.log('[DEBUG] RATE_LIMIT_KV exists:', !!env.RATE_LIMIT_KV);
+    const rateLimit = await checkRateLimit(env.RATE_LIMIT_KV);
+    console.log('[DEBUG] rateLimit result:', JSON.stringify(rateLimit));
+    if (!rateLimit.allowed) {
+      return new Response(JSON.stringify({
+        error: "每日请求次数已达上限 (200次/天)，请明天再试",
+        errorCode: "RATE_LIMIT_EXCEEDED",
+        dailyLimit: DAILY_LIMIT,
+        resetTime: "UTC 00:00"
+      }), {
+        status: 429,
+        headers: { "Content-Type": "application/json" },
+      });
+    }
     // Allow configuring a custom gateway URL (e.g., Cloudflare Worker)
     let baseUrl = gatewayUrl || 'https://generativelanguage.googleapis.com';
     
@@ -124,7 +168,14 @@ Generate a high-quality image based on this prompt: ${prompt}` });
          throw new Error("No image data returned.");
     }
 
-    return new Response(JSON.stringify({ imageData }), {
+    return new Response(JSON.stringify({
+      imageData,
+      rateLimit: {
+        remaining: rateLimit.remaining,
+        limit: DAILY_LIMIT,
+        used: rateLimit.current
+      }
+    }), {
       status: 200,
       headers: { "Content-Type": "application/json" },
     });

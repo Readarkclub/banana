@@ -7,6 +7,17 @@ export interface GenerationSettings {
   temperature: number;
 }
 
+export interface RateLimitInfo {
+  remaining: number;
+  limit: number;
+  used: number;
+}
+
+export interface GenerationResponse {
+  imageData: string;
+  rateLimit?: RateLimitInfo;
+}
+
 export interface GeneratedImageResult {
   imageUrl: string;
   prompt: string;

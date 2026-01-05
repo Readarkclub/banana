@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { generateImageContent } from './services/geminiService';
-import { GenerationSettings, AspectRatio, ImageResolution } from './types';
+import { GenerationSettings, AspectRatio, ImageResolution, RateLimitInfo } from './types';
 import { DownloadIcon, UploadIcon, XMarkIcon, SparklesIcon, AdjustmentsIcon, TrashIcon, ExpandIcon } from './components/Icon';
 import ImageEditor from './components/ImageEditor';
 
@@ -13,6 +13,8 @@ const App: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [isPromptExpanded, setIsPromptExpanded] = useState<boolean>(false);
   const [editingImageIndex, setEditingImageIndex] = useState<number | null>(null);
+  const [rateLimit, setRateLimit] = useState<RateLimitInfo | null>(null);
+  const [isRateLimited, setIsRateLimited] = useState<boolean>(false);
   
   // Settings State
   const [settings, setSettings] = useState<GenerationSettings>({
@@ -78,20 +80,29 @@ const App: React.FC = () => {
     const imagesToUse = overrideImages ?? referenceImages;
 
     if (!promptToUse.trim()) return;
+    if (isRateLimited) return;
 
     setIsGenerating(true);
     setError(null);
     setGeneratedImage(null);
 
     try {
-      const imageUrl = await generateImageContent(promptToUse, imagesToUse, settings);
-      setGeneratedImage(imageUrl);
+      const result = await generateImageContent(promptToUse, imagesToUse, settings);
+      setGeneratedImage(result.imageData);
+      if (result.rateLimit) {
+        setRateLimit(result.rateLimit);
+      }
       // Scroll to output
       setTimeout(() => {
         outputSectionRef.current?.scrollIntoView({ behavior: 'smooth' });
       }, 100);
     } catch (err: any) {
-      setError(err.message || "Failed to generate image. Please try again.");
+      if (err.isRateLimitError) {
+        setIsRateLimited(true);
+        setError(`🚫 ${err.message}`);
+      } else {
+        setError(err.message || "Failed to generate image. Please try again.");
+      }
     } finally {
       setIsGenerating(false);
     }
@@ -125,8 +136,21 @@ const App: React.FC = () => {
             <span className="bg-black text-white p-1 rounded-md"><SparklesIcon className="w-4 h-4" /></span>
             Nano Banana Pro
         </h1>
-        <div className="text-xs text-gray-500 font-medium px-2 py-1 bg-gray-100 rounded-full border border-gray-200">
-          gemini-3-pro-image-preview
+        <div className="flex items-center gap-3">
+          {rateLimit && (
+            <div className={`text-xs font-medium px-2 py-1 rounded-full border ${
+              rateLimit.remaining <= 10
+                ? 'bg-red-50 text-red-600 border-red-200'
+                : rateLimit.remaining <= 50
+                  ? 'bg-yellow-50 text-yellow-600 border-yellow-200'
+                  : 'bg-green-50 text-green-600 border-green-200'
+            }`}>
+              剩余 {rateLimit.remaining}/{rateLimit.limit} 次
+            </div>
+          )}
+          <div className="text-xs text-gray-500 font-medium px-2 py-1 bg-gray-100 rounded-full border border-gray-200">
+            gemini-3-pro-image-preview
+          </div>
         </div>
       </header>
 
@@ -213,14 +237,21 @@ const App: React.FC = () => {
               {/* Generate Button */}
               <button
                 onClick={() => handleGenerate()}
-                disabled={!prompt.trim() || isGenerating}
+                disabled={!prompt.trim() || isGenerating || isRateLimited}
                 className={`flex items-center gap-2 px-8 py-3 rounded-full text-base font-semibold transition-all shadow-sm ${
-                  !prompt.trim() || isGenerating
-                    ? 'bg-gray-200 text-gray-400 cursor-not-allowed'
-                    : 'bg-black text-white hover:bg-gray-800 hover:shadow-lg active:scale-95'
+                  isRateLimited
+                    ? 'bg-red-100 text-red-400 cursor-not-allowed'
+                    : !prompt.trim() || isGenerating
+                      ? 'bg-gray-200 text-gray-400 cursor-not-allowed'
+                      : 'bg-black text-white hover:bg-gray-800 hover:shadow-lg active:scale-95'
                 }`}
+                title={isRateLimited ? '每日请求次数已达上限，请明天再试' : ''}
               >
-                {isGenerating ? (
+                {isRateLimited ? (
+                  <span className="flex items-center gap-2" key="limited">
+                    🚫 今日已达上限
+                  </span>
+                ) : isGenerating ? (
                   <span className="flex items-center gap-2" key="generating">
                     <svg className="animate-spin h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
                       <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
@@ -365,8 +396,9 @@ const App: React.FC = () => {
       </main>
       
       {/* Footer */}
-      <footer className="py-6 text-center text-gray-400 text-xs border-t border-gray-100 bg-white">
+      <footer className="py-6 px-6 text-gray-400 text-xs border-t border-gray-100 bg-white flex justify-between items-center">
           <p>This is a demo application. Use responsibly. <a href="https://ai.google.dev/gemini-api/docs/billing" target="_blank" rel="noopener noreferrer" className="underline hover:text-gray-600">Pricing Info</a></p>
+          <a href="https://rrzxs.com" target="_blank" rel="noopener noreferrer" className="hover:text-gray-600 transition-colors">人人智学社 rrzxs.com</a>
       </footer>
 
       {/* Image Editor Modal */}
