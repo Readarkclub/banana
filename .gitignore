@@ -25,3 +25,10 @@ dist-ssr
 
 .env
 .dev.vars
+
+# Local tooling / caches
+.wrangler/
+.esdata/
+.claude/settings.local.json
+.claude/*.bak
+nul

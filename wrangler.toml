@@ -1,0 +1,7 @@
+name = "nano-banana-pro-imager"
+compatibility_date = "2025-11-25"
+
+# KV namespace for rate limiting
+[[kv_namespaces]]
+binding = "RATE_LIMIT_KV"
+id = "617dc02a767443248431ded308779262"  # Replace after running: wrangler kv:namespace create "RATE_LIMIT"
