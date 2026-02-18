@@ -1,7 +1,7 @@
 // import { GoogleGenAI } from "@google/genai"; // SDK removed to allow custom base URL via fetch
 
 const MODEL_NAME = 'gemini-3-pro-image-preview';
-const DAILY_LIMIT = 200; // RPD (Requests Per Day) limit
+const DAILY_LIMIT = 60; // RPD (Requests Per Day) limit
 
 // Get current date in UTC as key (format: YYYY-MM-DD)
 function getTodayKey(): string {
@@ -42,7 +42,7 @@ export async function onRequestPost(context) {
     console.log('[DEBUG] rateLimit result:', JSON.stringify(rateLimit));
     if (!rateLimit.allowed) {
       return new Response(JSON.stringify({
-        error: "每日请求次数已达上限 (200次/天)，请明天再试",
+        error: "每日请求次数已达上限 (60次/天)，请明天再试",
         errorCode: "RATE_LIMIT_EXCEEDED",
         dailyLimit: DAILY_LIMIT,
         resetTime: "UTC 00:00"

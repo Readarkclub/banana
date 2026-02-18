@@ -114,7 +114,7 @@ Generate a high-quality image based on this prompt: ${prompt}`,
         if (response.status === 429 || data?.error?.status === 'RATE_LIMIT_EXCEEDED') {
           const error = new Error(data?.error?.message || 'Daily request limit reached');
           (error as any).isRateLimitError = true;
-          (error as any).dailyLimit = data?.rateLimit?.limit || 200;
+          (error as any).dailyLimit = data?.rateLimit?.limit || 60;
           (error as any).resetTime = data?.rateLimit?.resetTime || 'UTC 00:00';
           throw error;
         }
@@ -130,7 +130,7 @@ Generate a high-quality image based on this prompt: ${prompt}`,
       const rateLimitInfo: RateLimitInfo | undefined = rateLimitRemaining
         ? {
             remaining: parseInt(rateLimitRemaining, 10),
-            limit: parseInt(rateLimitLimit || '200', 10),
+            limit: parseInt(rateLimitLimit || '60', 10),
             used: parseInt(rateLimitUsed || '0', 10),
           }
         : undefined;
