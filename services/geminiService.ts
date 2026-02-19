@@ -102,9 +102,15 @@ Generate a high-quality image based on this prompt: ${prompt}`,
         generationConfig: { temperature: settings?.temperature ?? 1.0 },
       };
 
+      const apiSecretKey = (import.meta.env?.VITE_API_SECRET_KEY as string | undefined)?.trim();
+      const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+      if (apiSecretKey) {
+        headers['Authorization'] = `Bearer ${apiSecretKey}`;
+      }
+
       const response = await fetch(`${baseUrl}/v1beta/models/${MODEL_NAME}:generateContent`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers,
         body: JSON.stringify(requestBody),
       });
 
