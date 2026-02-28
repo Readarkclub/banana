@@ -1,6 +1,6 @@
 import { GenerationSettings, GenerationResponse, RateLimitInfo } from "../types";
 
-const MODEL_NAME = 'gemini-3-pro-image-preview';
+const MODEL_NAME = 'gemini-3.1-flash-image-preview';
 
 function normalizeBaseUrl(url: string): string {
   return url.replace(/\/+$/, '');

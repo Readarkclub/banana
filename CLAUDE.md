@@ -93,5 +93,5 @@ GEMINI_GATEWAY_URL=https://banana.lwh-js.workers.dev
 
 - 参考图像: 最多10张，每张最大5MB
 - 支持格式: PNG, JPEG, WebP
-- 使用固定模型: `gemini-3-pro-image-preview`
+- 使用固定模型: `gemini-3.1-flash-image-preview`
 - API网关代理解决国内访问限制

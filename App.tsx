@@ -149,7 +149,7 @@ const App: React.FC = () => {
             </div>
           )}
           <div className="text-xs text-gray-500 font-medium px-2 py-1 bg-gray-100 rounded-full border border-gray-200">
-            gemini-3-pro-image-preview
+            gemini-3.1-flash-image-preview
           </div>
         </div>
       </header>

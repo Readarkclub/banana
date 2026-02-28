@@ -1,6 +1,6 @@
 // import { GoogleGenAI } from "@google/genai"; // SDK removed to allow custom base URL via fetch
 
-const MODEL_NAME = 'gemini-3-pro-image-preview';
+const MODEL_NAME = 'gemini-3.1-flash-image-preview';
 const DAILY_LIMIT = 60; // RPD (Requests Per Day) limit
 
 // Get current date in UTC as key (format: YYYY-MM-DD)
