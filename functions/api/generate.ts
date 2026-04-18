@@ -3,6 +3,18 @@
 const MODEL_NAME = 'gemini-3.1-flash-image-preview';
 const DAILY_LIMIT = 60; // RPD (Requests Per Day) limit
 
+function normalizeBaseUrl(url: string): string {
+  return url.replace(/\/+$/, '');
+}
+
+function buildGatewayHeaders(apiSecretKey?: string, apiKey?: string): Record<string, string> {
+  return {
+    'Content-Type': 'application/json',
+    ...(apiSecretKey ? { Authorization: `Bearer ${apiSecretKey}` } : {}),
+    ...(!apiSecretKey && apiKey ? { 'x-goog-api-key': apiKey } : {}),
+  };
+}
+
 // Get current date in UTC as key (format: YYYY-MM-DD)
 function getTodayKey(): string {
   const now = new Date();
@@ -34,6 +46,7 @@ export async function onRequestPost(context) {
   try {
     const { request, env } = context;
     const apiKey = env.GEMINI_API_KEY;
+    const apiSecretKey = env.API_SECRET_KEY;
     const gatewayUrl = env.GEMINI_GATEWAY_URL;
 
     // Rate limit check
@@ -55,14 +68,19 @@ export async function onRequestPost(context) {
     let baseUrl = gatewayUrl || 'https://generativelanguage.googleapis.com';
     
     // Remove trailing slash from baseUrl if present
-    if (baseUrl.endsWith('/')) {
-        baseUrl = baseUrl.slice(0, -1);
-    }
+    baseUrl = normalizeBaseUrl(baseUrl);
 
     // If using Google's direct API endpoint, an API key is required.
     // If a gateway is configured, the gateway may inject authentication itself.
     if (!apiKey && !gatewayUrl) {
       return new Response(JSON.stringify({ error: "Configuration Error: Missing API Key" }), {
+        status: 500,
+        headers: { "Content-Type": "application/json" },
+      });
+    }
+
+    if (gatewayUrl && !apiSecretKey) {
+      return new Response(JSON.stringify({ error: "Configuration Error: Missing API_SECRET_KEY for gateway mode" }), {
         status: 500,
         headers: { "Content-Type": "application/json" },
       });
@@ -123,10 +141,7 @@ Generate a high-quality image based on this prompt: ${prompt}` });
 
     const apiResponse = await fetch(apiUrl, {
         method: 'POST',
-        headers: {
-            'Content-Type': 'application/json',
-            ...(apiKey ? { 'x-goog-api-key': apiKey } : {}),
-        },
+        headers: buildGatewayHeaders(apiSecretKey, apiKey),
         body: JSON.stringify(requestBody)
     });
 

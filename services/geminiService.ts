@@ -52,7 +52,7 @@ async function parseJsonOrThrow(response: Response): Promise<any> {
         'This usually means the backend (Cloudflare Pages Functions) is not running or not deployed.',
         '',
         'Local dev: run `npm run pages:dev` and open the Wrangler URL (usually `http://127.0.0.1:8788`), not the Vite port.',
-        'Frontend-only deploy: set `VITE_GEMINI_GATEWAY_URL` to your Worker gateway base URL (e.g. `https://readark.club/api`).',
+        'Frontend-only deploy: set `VITE_GEMINI_GATEWAY_URL` to your Worker gateway base URL (e.g. `https://api.readark.club/api`).',
       ].join('\n')
     );
   }
