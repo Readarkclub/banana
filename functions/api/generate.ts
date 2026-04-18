@@ -135,13 +135,19 @@ Generate a high-quality image based on this prompt: ${prompt}` });
     }
     
     const requestBody = {
-      contents: [{ parts: parts }],
-      generationConfig: generationConfig
+      contents: [{ role: 'user', parts: parts }],
+      generationConfig: {
+        responseModalities: ['TEXT', 'IMAGE'],
+        ...(settings?.aspectRatio && settings.aspectRatio !== 'Auto'
+          ? { imageConfig: { aspectRatio: settings.aspectRatio } }
+          : {}),
+        ...generationConfig
+      }
     };
 
 
     // Call Gemini API via fetch
-    const apiUrl = `${baseUrl}/v1beta/models/${MODEL_NAME}:generateContent`;
+    const apiUrl = `${baseUrl}/v1/models/${MODEL_NAME}:generateContent`;
     console.log('[DEBUG] Requesting URL:', apiUrl);
     console.log('[DEBUG] baseUrl:', baseUrl);
 

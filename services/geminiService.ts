@@ -104,8 +104,14 @@ Generate a high-quality image based on this prompt: ${prompt}`,
       });
 
       const requestBody = {
-        contents: [{ parts }],
-        generationConfig: { temperature: settings?.temperature ?? 1.0 },
+        contents: [{ role: 'user', parts }],
+        generationConfig: {
+          responseModalities: ['TEXT', 'IMAGE'],
+          ...(settings?.aspectRatio && settings.aspectRatio !== 'Auto'
+            ? { imageConfig: { aspectRatio: settings.aspectRatio } }
+            : {}),
+          temperature: settings?.temperature ?? 1.0,
+        },
       };
 
       const apiSecretKey = (import.meta.env?.VITE_API_SECRET_KEY as string | undefined)?.trim();
@@ -114,7 +120,7 @@ Generate a high-quality image based on this prompt: ${prompt}`,
         headers['Authorization'] = `Bearer ${apiSecretKey}`;
       }
 
-      const response = await fetch(`${baseUrl}/v1beta/models/${MODEL_NAME}:generateContent`, {
+      const response = await fetch(`${baseUrl}/v1/models/${MODEL_NAME}:generateContent`, {
         method: 'POST',
         headers,
         body: JSON.stringify(requestBody),
