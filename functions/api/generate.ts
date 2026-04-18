@@ -4,7 +4,13 @@ const MODEL_NAME = 'gemini-3.1-flash-image-preview';
 const DAILY_LIMIT = 60; // RPD (Requests Per Day) limit
 
 function normalizeBaseUrl(url: string): string {
-  return url.replace(/\/+$/, '');
+  const trimmed = url.replace(/\/+$/, '');
+
+  if (trimmed === 'https://readark.club/api') {
+    return 'https://api.readark.club/api';
+  }
+
+  return trimmed;
 }
 
 function buildGatewayHeaders(apiSecretKey?: string, apiKey?: string): Record<string, string> {

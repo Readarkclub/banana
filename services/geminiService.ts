@@ -3,7 +3,13 @@ import { GenerationSettings, GenerationResponse, RateLimitInfo } from "../types"
 const MODEL_NAME = 'gemini-3.1-flash-image-preview';
 
 function normalizeBaseUrl(url: string): string {
-  return url.replace(/\/+$/, '');
+  const trimmed = url.replace(/\/+$/, '');
+
+  if (trimmed === 'https://readark.club/api') {
+    return 'https://api.readark.club/api';
+  }
+
+  return trimmed;
 }
 
 function extractFirstInlineImageData(responseData: any): string {
