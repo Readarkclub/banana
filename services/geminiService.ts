@@ -55,10 +55,11 @@ async function parseJsonOrThrow(response: Response): Promise<any> {
     throw new Error(
       [
         'API endpoint `/api/generate` returned 404 (not found).',
-        'This usually means the backend (Cloudflare Pages Functions) is not running or not deployed.',
+        'This usually means the backend endpoint is not running or not deployed.',
         '',
         'Local dev: run `npm run pages:dev` and open the Wrangler URL (usually `http://127.0.0.1:8788`), not the Vite port.',
-        'Frontend-only deploy: set `VITE_GEMINI_GATEWAY_URL` to your Worker gateway base URL (e.g. `https://api.readark.club/api`).',
+        'Vercel deploy: ensure the project exposes `/api/generate` and has server-side env vars configured.',
+        'Direct gateway mode is optional and should only be used for debugging.',
       ].join('\n')
     );
   }
@@ -76,9 +77,10 @@ export async function generateImageContent(
 ): Promise<GenerationResponse> {
 
   try {
+    const allowDirectGateway = (import.meta.env?.VITE_DIRECT_GATEWAY_ENABLED as string | undefined)?.trim() === 'true';
     const gatewayBaseUrl = (import.meta.env?.VITE_GEMINI_GATEWAY_URL as string | undefined)?.trim();
 
-    if (gatewayBaseUrl) {
+    if (allowDirectGateway && gatewayBaseUrl) {
       const baseUrl = normalizeBaseUrl(gatewayBaseUrl);
 
       const parts: any[] = [];
@@ -114,11 +116,7 @@ Generate a high-quality image based on this prompt: ${prompt}`,
         },
       };
 
-      const apiSecretKey = (import.meta.env?.VITE_API_SECRET_KEY as string | undefined)?.trim();
       const headers: Record<string, string> = { 'Content-Type': 'application/json' };
-      if (apiSecretKey) {
-        headers['Authorization'] = `Bearer ${apiSecretKey}`;
-      }
 
       const response = await fetch(`${baseUrl}/v1/models/${MODEL_NAME}:generateContent`, {
         method: 'POST',

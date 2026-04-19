@@ -16,8 +16,9 @@ View your app in AI Studio: https://ai.studio/apps/drive/1OJK1mT6nxI0VJPQ0c3jd1i
 1. Install dependencies:
    `npm install`
 2. Configure environment variables:
-   - Cloudflare Pages Functions (recommended): set `GEMINI_API_KEY` (and optionally `GEMINI_GATEWAY_URL`) in `.env` / `.dev.vars`
-   - Frontend-only (e.g. Vercel): set `VITE_GEMINI_GATEWAY_URL=https://readark.club/api` so the browser calls the Worker gateway directly
+   - Cloudflare Pages Functions: set `GEMINI_API_KEY` (and optionally `GEMINI_GATEWAY_URL`) in `.env` / `.dev.vars`
+   - Vercel: set server-side env vars `GEMINI_GATEWAY_URL=https://api.readark.club/api` and `API_SECRET_KEY=...`
+   - Direct browser-to-Worker mode is optional for debugging only. If you explicitly need it, set `VITE_DIRECT_GATEWAY_ENABLED=true` and `VITE_GEMINI_GATEWAY_URL=https://api.readark.club/api`
 3. Run the app:
    - Full stack (frontend + `/api/*`): `npm run pages:dev`
    - Frontend only: `npm run dev`
