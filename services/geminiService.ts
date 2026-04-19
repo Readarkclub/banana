@@ -2,16 +2,6 @@ import { GenerationSettings, GenerationResponse, RateLimitInfo } from "../types"
 
 const MODEL_NAME = 'gemini-3.1-flash-image-preview';
 
-function normalizeBaseUrl(url: string): string {
-  const trimmed = url.replace(/\/+$/, '');
-
-  if (trimmed === 'https://readark.club/api') {
-    return 'https://api.readark.club/api';
-  }
-
-  return trimmed;
-}
-
 function extractFirstInlineImageData(responseData: any): string {
   if (!responseData?.candidates?.length) {
     throw new Error('The model did not return any candidates.');
@@ -59,7 +49,7 @@ async function parseJsonOrThrow(response: Response): Promise<any> {
         '',
         'Local dev: run `npm run pages:dev` and open the Wrangler URL (usually `http://127.0.0.1:8788`), not the Vite port.',
         'Vercel deploy: ensure the project exposes `/api/generate` and has server-side env vars configured.',
-        'Direct gateway mode is optional and should only be used for debugging.',
+        'Do not rely on browser-side `VITE_*` secrets for production requests.',
       ].join('\n')
     );
   }
@@ -77,83 +67,6 @@ export async function generateImageContent(
 ): Promise<GenerationResponse> {
 
   try {
-    const allowDirectGateway = (import.meta.env?.VITE_DIRECT_GATEWAY_ENABLED as string | undefined)?.trim() === 'true';
-    const gatewayBaseUrl = (import.meta.env?.VITE_GEMINI_GATEWAY_URL as string | undefined)?.trim();
-
-    if (allowDirectGateway && gatewayBaseUrl) {
-      const baseUrl = normalizeBaseUrl(gatewayBaseUrl);
-
-      const parts: any[] = [];
-
-      if (Array.isArray(referenceImagesBase64) && referenceImagesBase64.length > 0) {
-        for (const refImg of referenceImagesBase64) {
-          const matches = String(refImg).match(/^data:(.+);base64,(.+)$/);
-          if (matches?.length === 3) {
-            parts.push({
-              inlineData: {
-                mimeType: matches[1],
-                data: matches[2],
-              },
-            });
-          }
-        }
-      }
-
-      parts.push({
-        text: `[Strict Image Generation Mode]
-Do not describe how to draw. Do not generate text.
-Generate a high-quality image based on this prompt: ${prompt}`,
-      });
-
-      const requestBody = {
-        contents: [{ role: 'user', parts }],
-        generationConfig: {
-          responseModalities: ['TEXT', 'IMAGE'],
-          ...(settings?.aspectRatio && settings.aspectRatio !== 'Auto'
-            ? { imageConfig: { aspectRatio: settings.aspectRatio } }
-            : {}),
-          temperature: settings?.temperature ?? 1.0,
-        },
-      };
-
-      const headers: Record<string, string> = { 'Content-Type': 'application/json' };
-
-      const response = await fetch(`${baseUrl}/v1/models/${MODEL_NAME}:generateContent`, {
-        method: 'POST',
-        headers,
-        body: JSON.stringify(requestBody),
-      });
-
-      const data = await parseJsonOrThrow(response);
-      if (!response.ok) {
-        // Check for rate limit error from Gateway
-        if (response.status === 429 || data?.error?.status === 'RATE_LIMIT_EXCEEDED') {
-          const error = new Error(data?.error?.message || 'Daily request limit reached');
-          (error as any).isRateLimitError = true;
-          (error as any).dailyLimit = data?.rateLimit?.limit || 60;
-          (error as any).resetTime = data?.rateLimit?.resetTime || 'UTC 00:00';
-          throw error;
-        }
-        const message = data?.error?.message || data?.error || `Server error: ${response.status}`;
-        throw new Error(String(message));
-      }
-
-      // Extract rate limit info from response headers (set by Gateway Worker)
-      const rateLimitRemaining = response.headers.get('X-RateLimit-Remaining');
-      const rateLimitLimit = response.headers.get('X-RateLimit-Limit');
-      const rateLimitUsed = response.headers.get('X-RateLimit-Used');
-
-      const rateLimitInfo: RateLimitInfo | undefined = rateLimitRemaining
-        ? {
-            remaining: parseInt(rateLimitRemaining, 10),
-            limit: parseInt(rateLimitLimit || '60', 10),
-            used: parseInt(rateLimitUsed || '0', 10),
-          }
-        : undefined;
-
-      return { imageData: extractFirstInlineImageData(data), rateLimit: rateLimitInfo };
-    }
-
     const response = await fetch('/api/generate', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
