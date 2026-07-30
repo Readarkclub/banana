@@ -1,4 +1,4 @@
-const MODEL_NAME = 'gemini-3.1-flash-image-preview';
+const MODEL_NAME = 'gemini-3.1-flash-image';
 
 function normalizeBaseUrl(url) {
   const trimmed = String(url || '').replace(/\/+$/, '');
